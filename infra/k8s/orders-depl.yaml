@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders
+  template:
+    metadata:
+      labels:
+        app: orders
+    spec:
+      containers:
+        - name: orders
+          image: omarelsady/orders
+          env:
+            - name: NATS_CLIENT_ID
+              valueFrom: #env variable to store the NATS client ID
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NATS_URL
+              value: 'http://nats-srv:4222' #env variable to store the NATS server URL
+            - name: NATS_CLUSTER_ID
+              value: 'ticketing' #env variable to store the NATS cluster ID
+            - name: MONGO_URI
+              value: 'mongodb://orders-mongo-srv:27017/orders' #env variable to store the MongoDB connection URI
+            - name: JWT_KEY #env variable to store the JWT secret key
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret # name of the kubernetes secret that contains the JWT secret key
+                  key: JWT_KEY # key in the secret that contains the JWT secret key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-srv
+spec:
+  selector:
+    app: orders
+  ports:
+    - name: orders
+      protocol: TCP
+      port: 3000
+      targetPort: 3000

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: omarelsady/auth
+          env:
+            - name: MONGO_URI
+              value: 'mongodb://auth-mongo-srv:27017/auth' #env variable to store the MongoDB connection URI
+            - name: JWT_KEY #env variable to store the JWT secret key
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret # name of the kubernetes secret that contains the JWT secret key
+                  key: JWT_KEY # key in the secret that contains the JWT secret key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-srv
+spec:
+  selector:
+    app: auth
+  ports:
+    - name: auth
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
