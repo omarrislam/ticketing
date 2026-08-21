@@ -3,8 +3,6 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { app } from '../app';
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
 
 declare global {
   var signin: (id?: string) => string[];
@@ -12,38 +10,17 @@ declare global {
 
 jest.mock('../nats-wrapper');
 
-// STRIPE_KEY is a real credential and must never be committed. Supply it via the
-// environment, or a git-ignored payments/.env.test file:  STRIPE_KEY=sk_test_...
-if (!process.env.STRIPE_KEY) {
-  const candidates = [
-    path.resolve(process.cwd(), '.env.test'),
-    path.resolve(process.cwd(), 'payments/.env.test'),
-  ];
-  for (const file of candidates) {
-    if (!fs.existsSync(file)) continue;
-    const line = fs
-      .readFileSync(file, 'utf8')
-      .split(/\r?\n/)
-      .find((l) => l.trim().startsWith('STRIPE_KEY='));
-    if (line) {
-      process.env.STRIPE_KEY = line.trim().slice('STRIPE_KEY='.length).trim();
-      break;
-    }
-  }
-}
-
-if (!process.env.STRIPE_KEY) {
-  throw new Error(
-    'STRIPE_KEY is not set. Add it to payments/.env.test (git-ignored) or export it before running tests.',
-  );
-}
+// Stripe is mocked in tests (see src/__mocks__/stripe.ts), so no real key is
+// needed. This placeholder only keeps the Stripe client constructor in
+// src/stripe.ts from throwing when app.ts is imported.
+process.env.STRIPE_KEY = process.env.STRIPE_KEY || 'sk_test_placeholder';
 
 let mongo: any;
 beforeAll(async () => {
   process.env.JWT_KEY = 'asdfasdf';
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-  const mongo = await MongoMemoryServer.create();
+  mongo = await MongoMemoryServer.create();
   const mongoUri = mongo.getUri();
 
   await mongoose.connect(mongoUri, {});
